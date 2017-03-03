@@ -14,3 +14,14 @@ The easiest way to make your first post is to edit this one. Go into /_posts/ an
 ### First blog post
 
 How does it look like?
+
+### Simple code
+
+	#include <iostream>
+	int main() {
+		std::cout << "hello" << std::endl;
+    	return 0;
+	}
+
+### Complete.
+
