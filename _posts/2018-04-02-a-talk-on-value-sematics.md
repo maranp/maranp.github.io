@@ -3,7 +3,7 @@ published: true
 ---
 ## Talks I like - Value semantics: It ain't about the syntax!
 
-Following is my short notes on the great [talk](https://www.youtube.com/watch?v=AL9DBWdj-Pg) by John Lakos.
+Following is my short notes on the [talk](https://www.youtube.com/watch?v=AL9DBWdj-Pg) by John Lakos.
 
 - 2 objects where one is copy constructed from another
   - both are different objects - objects have different address
@@ -83,7 +83,7 @@ Following is my short notes on the great [talk](https://www.youtube.com/watch?v=
 
 Recommendations:
 John recommends two books in the talk:
-Elements of programming - Alexander Stepanov (hard to read)
-From Mathematics to generic programming - Alexander Stepanov (more accessible)
+     Elements of programming - Alexander Stepanov (hard to read)
+     From Mathematics to generic programming - Alexander Stepanov (more accessible)
 
 Watch the great talk [here](https://www.youtube.com/watch?v=AL9DBWdj-Pg).
