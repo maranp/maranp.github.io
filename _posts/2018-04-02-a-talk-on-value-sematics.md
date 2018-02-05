@@ -83,7 +83,7 @@ Following is my short notes on the [talk](https://www.youtube.com/watch?v=AL9DBW
 
 Recommendations:
 John recommends two books in the talk:
-     Elements of programming - Alexander Stepanov (hard to read)
-     From Mathematics to generic programming - Alexander Stepanov (more accessible)
+* Elements of programming - Alexander Stepanov (hard to read)
+* From Mathematics to generic programming - Alexander Stepanov (more accessible)
 
 Watch the great talk [here](https://www.youtube.com/watch?v=AL9DBWdj-Pg).
