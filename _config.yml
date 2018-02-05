@@ -6,7 +6,7 @@
 name: Maran Pakkirisamy
 
 # Short bio or description (displayed in the header)
-description: Computing labour
+description: Hacker
 
 # URL of your avatar or profile pic (you could use your GitHub profile pic)
 avatar: https://avatars2.githubusercontent.com/u/6899297?v=3&u=36615950b90c870b5adb57439813c8204cd0306b&s=400
@@ -26,10 +26,10 @@ footer-links:
   linkedin: maran-pakkirisamy-7827345/
   pinterest:
   rss: # just type anything here for a working RSS icon
-  twitter: pmaran
+  twitter: maranpsamy
   stackoverflow: # your stackoverflow profile, e.g. "users/50476/bart-kiers"
   youtube: # channel/<your_long_string> or user/<user-name>
-  googleplus: # anything in your profile username that comes after plus.google.com/
+  googleplus: +MaranPakkirisamy
 
 
 # Enter your Disqus shortname (not your username) to enable commenting on posts
