@@ -1,89 +1,187 @@
 ---
 published: true
 ---
-## Talks I like - Value semantics: It ain't about the syntax!
+## Building and using llvm toolchain
 
-Following is my short notes on the [talk](https://www.youtube.com/watch?v=AL9DBWdj-Pg) by John Lakos.
+This post can be regarded as a supplement to Chandler Carruth's talk on [LLVM: A Modern, Open C++ Toolchain](https://www.youtube.com/watch?v=uZI_Qla4pNA).
 
-- 2 objects where one is copy constructed from another
-  - both are different objects - objects have different address
-  - both are in different state
-  - both show differenr behaviour
-    - apply same sequence of operations, will the observable behaviour be the same
-    - NO. there is an illustration in the talk
-  - both should have same "value"
+Anybody willing to start playing with llvm toolchain shall better start with this talk. A must watch.
+In the talk, Chandler demonstrates building llvm toolchain and using a number of programming aids offered by the llvm toolchain.
 
-- mathematical type:
-  - a set of globally unique values
-    - Eg: integer
-  - a set of operations on those values
+Here is the list of commands extracted from the talk to build llvm toolchain.
 
-- c++ type
-  - may (or may not) be an approximation of mathematical type
-    - eg: int in c++
-  - an object of C++ type (int) represents one of the (subset of )
-    unique values of the mathematical type (integer)
-  - the c++ object is another representation of the unique value - eg. 5
+```bash
+# set LLVM_ROOT to the folder where llvm files are going to stay.
+cd $LLVM_ROOT
+git clone --depth=1 https://llvm.org/git/llvm.git
+cd llvm/tools
+git clone --depth=1 https://llvm.org/git/clang.git
+git clone --depth=1 https://llvm.org/git/lld.git
+cd clang/tools
+git clone --depth=1 https://llvm.org/git/clang-tools-extr\
+a.git extra
+cd $LLVM_ROOT/llvm/projects
+git clone --depth=1 https://llvm.org/git/libcxx.git
+git clone --depth=1 https://llvm.org/git/libcxxabi.git
+git clone --depth=1 https://llvm.org/git/compiler-rt.git
+mkdir $LLVM_ROOT/build
+cd $LLVM_ROOT/build
+```
 
-- how you present (interface) is important not how you represent (data members and its types)
-  - thats why we have abstraction
+Chandler recommends and demonstrates ninja based build.
 
-- salient features of a value type
-  - the return value of its get methods, well not all the get methods
-    - for eg: capacity() of vector is not its salient feature
+Before invoking ninja based build, make sure the following packages are already installed.
 
-- a vector approximates a mathematical sequence
+```bash
+sudo apt-get install -y cmake
+sudo apt-get install -y cmake-curses-gui
+sudo apt-get install -y ninja-build
 
-- not all stateful objects have a value
-  - eg: a flash light has on/off state but does not have a meaningful value
-  - similarly a mutex lock - it does something but does not represent a value
+# command to instruct ccmake to create  ninja build files.
+ccmake -G Ninja $ROOT/llvm
+```
 
-- what types are value types, ie, the type that support value - semantic syntax?
-  - will the type have equality comparison?
-  - will the type have copy construction?
-  - will the type have assignment?
+This opens up ninja configuration console.
+Press 'c' to configure.
+Chandler recommends the following changes to the build configuration.
+Change
+* install path - CMAKE_INSTALL_PREFIX "$ROOT/install/`date`",
+* release build not debug build - CMAKE_BUILD_TYPE "Rel\
+ease",
+* disable assertion - LLVM_ENABLE_ASSERTIONS - gives a \
+ fast compiler
 
-- "mechanisms"
-  - stateful objects that do not represent values 
-- "valu types"
-  - stateful objects that *do* represent values
+# c to configure; g to generate build files and exit
 
-- a value semantic type defines
-  - default construction : T a, b
-  - copy construction : T a, b (a)
-  - destruction
-  - copy assignment : a = b
-  - operator==
+```bash
+# build and install
+ninja
+ninja install
+```
 
-- member operator== is a bad idea. Make it a free operator== (holds good for all binary operators that take consts)
-  - because free operator== is needed to satisfy the following condition
-    - a == d compiles <=> d == a compiles
-      - where a and d are different types
+Also there is a recommendation to use a tool called lndir
+that creates softlinks for all the files in the installation folder of llvm to the current folder.
 
-- a copy constructor may or may not copy non-salient attributes. eg: capacity() of std::vector
-  - so, looking at the implementation of copy constructor will not help us to
-    identify the salient attributes of the class
+```bash
+sudo apt-get install -y xutils-dev # to install lndir
+cd ~ # change to $HOME
+lndir $ROOT/install/`date`
+export PATH=$HOME/bin:$PATH
+clang++ --version
+```
+Next Chandler demonstrates some c++17 features supported by the llvm toolchain thus built and setup.
+* block initialization
+* structured binding
+* using string_view
+  * string_view may not be available with standard c++ library that comes with the system (libstdc++).
+  * Add `-stdlib=libc++` to compile command to direct clang to use libstdc++ that's built with llvm toolchain.
+  * Chandler here emphasises that we have just not build clang the compiler but the entire toolchain.
+For example, a different standard library can be chosen if required.
+* clang-tidy
+  * Chandler shows a loop that explicitly goes over a vector to illustrate how clang-tidy can help to transform the loop to a range based loop.
+  * However, he missed to use -checks='*' when listing checks with -list-checks. So he could not successfully search for the "modernize-loop-convert" check.
+  * So, here is the command to search for the relevant check and to use the check to tidy-up the code.
+```bash
+clang-tidy -list-checks -checks='*' | grep -i modern
+clang-tidy -checks='modernize-loop-convert' -fix -range-loop.cpp -- -std=c++17
+```
+* sanitizers
+  * asan - the address sanitizer
+  * Address sanitizer could detect following class of bugs
+    * use after free
+    * use after scope
+    * heap buffer overflows
 
-- instead, look at the implementation of operator== to identify the
-  salient attributes of a class
+  * add `-fsanitize=address` to compile command to compile the binary with address-sanitizer checks.
 
-- guideline for selecting salient attributes
-  - illustrated with type Rational
+Here Chandler compares and contrasts clang sanitzers with valgrind's capabilities.
+     * valgrind cannot detect stack buffer overflow but only heap buffer overflow and also has less precision.
+     * valgrind has limited visibility into life time of objects (cannot catch use after scope)
+     * valgrind can handle uninitialized memory errors. Address santizers can't handle it. But memory sanitizers can handle it.
 
-- a value type is
-  - regular - if it has operator==
-  - semi regular - if it does not have operator==
+ * To build the binary with memory sanitizer(msan) checks, add
+   `-fsanitize=memory` to the compilation command
+ * Using memory sanitizers on large projects requires all the files in the large project including the standard libraries used by the project be built with msan. If that's impossible, then valgrind is the only feasible option.
 
-- when selecting salient attributes of a type, avoid subjective interpretation
-  - fractions may be equivalent but not equal
-  - graphs may be isomorphic but not equal
-  - triangles may be similar but not equal
-  - subjective interpretaion of equality should be moved from operator==
-    to named functions
+* tsan: thread sanitizer
+  usage: `-fsanithize=thread`
 
-Recommendations:
-John recommends two books in the talk:
-* Elements of programming - Alexander Stepanov (hard to read)
-* From Mathematics to generic programming - Alexander Stepanov (more accessible)
+* tsan gives a very conservative model of c++ memory model. Every time the strict semantics that the language guarantees is violated, tsan will report it.
 
-Watch the great talk [here](https://www.youtube.com/watch?v=AL9DBWdj-Pg).
+* thinlto:
+there are traditional techniques for link time optimization. windows has link time code generation. They usually 
+      * have scaling limitation
+      * are slow, challenging to deploy as large application
+
+* to use thinlto, add the switch `-flto=thin`
+  * The linker on the system may not have thinlto technology incorporated. But what has been built is just not the compiler clang but an entire toolchain. So we have lld, the linker which has thinlto implementation.
+  * to use it, pass `-fuse-ld=lld`
+  * So, the required switches are `-flto=thin -fuse-ld=lld`
+
+To illustrate the advantage of employing thinlto, Chandler uses google benchmark to measure the performance of the application built with and without thinlto.
+Let's first install google benchmark
+Read the readme here without fail.
+https://github.com/google/benchmark
+and build as follows (taken from the readme).
+```bash
+git clone https://github.com/google/benchmark.git
+git clone https://github.com/google/googletest.git benchmark/googletest
+mkdir build && cd build
+
+# replace Ninja by your favourite build files generator
+# configure installation path and whatever is relevant
+ccmake -G Ninja ../benchmark/
+
+# use make if you used makefile generator
+ninja
+ninja install
+```
+
+Then build the program that use google benchmark as follows
+```bash
+export BENCH=/path/to/benchmark/installation
+clang++ demo.1.cpp f.cpp -o demo.1.slow -O3 -std=c++17 -I$BENCH/include -L$BENCH/lib -lbenchmark -pthreads
+
+# Now build with thin-lto
+clang++ demo.1.cpp f.cpp -o demo.1.fast -O3 -std=c++17 -I$BENCH/include -L$BENCH/lib -lbenchmark -pthreads -flto=thin -fuse-ld=lld
+```
+One notable point is that, the advantage of using thin-lto manifests only when compiling with -O3.
+
+-lto=thin can be used in production
+chromium browser, MAC operating system are built with thi
+n-lto.
+
+Next demonstration is about thin-lto's part in checking control flow integrity (cfi)
+
+A modern exploit is illustrated in cfi.h and cfi_call.cpp
+The exploit does not show upwith typical way of build and run.
+
+```bash
+clang++ cfi_call.cpp -o cfi_call -std=c++17
+```
+
+But when `-fsanitize=cfi` is used, exploit leads to crash. The application crashes instead of giving contol to a wrong function.
+```bash
+clang++ cfi_call.cpp -o cfi_call -std=c++17 -fsanitize=cfi -flto=thin -fvisibility=hidden -fuse-ld=lld
+```bash
+cfi-sanitizer can be used only with -flto and -fvisibility.
+The compiler gives nice help message which leads to using these options.
+
+To get a nice error message instead of code dump, add `-fno-sanitize-trap=cfi`, So the command becomes
+```bash
+clang++ cfi_call.cpp -o cfi_call -std=c++17 -fsanitize=cfi -flto=thin -fvisibility=hidden -fuse-ld=lld -fno-sanitize-trap=cfi
+```
+The error message displayed is
+cfi_call.cpp:37:9: runtime error: control flow integrity check for type 'DerivedB' failed during cast to unrelated type (vtable address 0x000000207ed0)
+0x000000207ed0: note: vtable is of type 'DerivedA'
+
+The error corresponds to the code
+callB(reinterpret_cast<DerivedB &>(a));
+
+where the prototype of callB is
+void callB(DerivedB &b);
+
+This build that includes control flow integrity can be shipped to production. Its designed to be very minimal and precise. Its a hardening/mitigation technique
+
+Watch the talk here.
+https://www.youtube.com/watch?v=uZI_Qla4pNA
